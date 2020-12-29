@@ -1,0 +1,7 @@
+pandas~=1.1.4
+nltk~=3.5
+tika~=1.24
+setuptools~=50.3.2
+docx~=0.2.4
+future~=0.18.2
+langid~=1.1.6
