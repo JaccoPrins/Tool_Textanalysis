@@ -2,11 +2,17 @@ import docx                                                                     
 from nltk.stem import SnowballStemmer                                                                   # pip install nltk
 from nltk.corpus import stopwords
 from nltk import tokenize, FreqDist
-from tika import parser                                                                                 # pip install tika
-from langdetect import detect                                                                           # pip install langdetect
-import re
-import pandas as pd                                                                                     # pip install pandas
 import os
+import tika
+TIKA_SERVER_JAR = 'https://repo1.maven.org/maven2/org/apache/tika/tika-server/1.19/tika-server-1.19.jar'
+tika.TikaClientonly = True
+tika.initVM()
+
+from tika import parser, language                                                                                 # pip install tika
+from langid import classify                                                                             # pip install langid
+from re import sub
+import pandas as pd                                                                                     # pip install pandas
+from tkinter import filedialog
 import tkinter as tk
 
 
@@ -16,8 +22,6 @@ def vectorize(tokens):                                                          
         vector.append(tokens.count(w))
     return vector
 
-
-fdist1 = ""
 
 language = {
     "nl": "dutch",
@@ -36,75 +40,72 @@ headings_bow = index + keywords                                                 
 
 root = tk.Tk()
 
-canvas1 = tk.Canvas(root, width=400, height=300)
+canvas1 = tk.Canvas(root, width=400, height=300)                                                        # Create empty program window
 canvas1.pack()
 
-entry1 = tk.Entry(root)
-canvas1.create_window(200, 140, window=entry1)
+
+directory_path = filedialog.askdirectory()
 
 
 def analysis():
-    directory_path = entry1.get()
     directory = os.fsencode(directory_path)
-    bow_df = pd.DataFrame(columns=headings_bow)  # Create empty table for bow
-    report = docx.Document()  # Create report document
-    report.add_heading(f'Analysis {os.path.basename(directory_path)}', 0)  # Add title to report
+    bow_df = pd.DataFrame(columns=headings_bow)                                                         # Create empty table for bow
+    report = docx.Document()                                                                            # Create report document
+    report.add_heading(f'Analysis {os.path.basename(directory_path)}', 0)                               # Add title to report
     for file in os.listdir(directory):
         document_path = os.path.join(directory, file).decode()
-        document = parser.from_file(document_path)  # Retrieve text from file
+        document = parser.from_file(document_path)                                                      # Retrieve text from file
         document = document['content']
-        content = re.sub(r'http\S+', " ", document)  # Delete all links
-        content = re.sub("[^a-zA-Z0-9|^-]", " ", content).lower()  # Delete all punctuation/upper case letters
-        content_words = tokenize.word_tokenize(content)  # Split words into list
-        language_name = language[detect(content)]  # Detect text language
-        content_words_core = " ".join(filter(lambda x: x in keywords, content_words)).split()  # Delete all words except for words in keywords
-        vector = vectorize(content_words_core)  # Count occurrence of keywords
-        filename_first = os.fsdecode(file)[0:3]  # Select first 3 characters of filename
-        vector.insert(0, language_name.capitalize())  # Add language to vector-list
-        vector.insert(0, filename_first)  # Add first 3 characters of filename to vector-list
-        bow = pd.DataFrame(vector).transpose()  # Put vector-list into table and transpose
-        bow.columns = headings_bow  # Add headings to table
-        bow_df = pd.concat([bow_df, bow])  # Add table to table of all files
-        bow_df[keywords] = bow_df[keywords].astype('int64')  # Change datatype in table to integer
-    bow_df.loc[:, 'Total'] = bow_df.sum(numeric_only=True, axis=1)  # Add totals column
-    bow_df.sort_values(by=['Total'], inplace=True, ascending=False)  # Sort table on descending total column
-    table_bow = report.add_table(bow_df.shape[0] + 1, bow_df.shape[1])  # Add template table
+        content = sub(r'http\S+', " ", document)                                                        # Delete all links
+        content = sub("[^a-zA-Z0-9|^-]", " ", content).lower()                                          # Delete all punctuation/upper case letters
+        content_words = tokenize.word_tokenize(content)                                                 # Split words into list
+        language_name = language[classify(content)[0]]                                                  # Detect text language
+        content_words_core = " ".join(filter(lambda x: x in keywords, content_words)).split()           # Delete all words except for words in keywords
+        vector = vectorize(content_words_core)                                                          # Count occurrence of keywords
+        filename_first = os.fsdecode(file)[0:3]                                                         # Select first 3 characters of filename
+        vector.insert(0, language_name.capitalize())                                                    # Add language to vector-list
+        vector.insert(0, filename_first)                                                                # Add first 3 characters of filename to vector-list
+        bow = pd.DataFrame(vector).transpose()                                                          # Put vector-list into table and transpose
+        bow.columns = headings_bow                                                                      # Add headings to table
+        bow_df = pd.concat([bow_df, bow])                                                               # Add table to table of all files
+        bow_df[keywords] = bow_df[keywords].astype('int64')                                             # Change datatype in table to integer
+    bow_df.loc[:, 'Total'] = bow_df.sum(numeric_only=True, axis=1)                                      # Add totals column
+    bow_df.sort_values(by=['Total'], inplace=True, ascending=False)                                     # Sort table on descending total column
+    table_bow = report.add_table(bow_df.shape[0] + 1, bow_df.shape[1])                                  # Add template table
     for j in range(bow_df.shape[-1]):
-        table_bow.cell(0, j).text = bow_df.columns[j]  # Add headers to table
+        table_bow.cell(0, j).text = bow_df.columns[j]                                                   # Add headers to table
     for i in range(bow_df.shape[0]):
         for j in range(bow_df.shape[-1]):
-            table_bow.cell(i + 1, j).text = str(bow_df.values[i, j])  # Add data to table
-    table_bow.style = 'Light Shading'  # Change style of table
+            table_bow.cell(i + 1, j).text = str(bow_df.values[i, j])                                    # Add data to table
+    table_bow.style = 'Light Shading'                                                                   # Change style of table
 
     for file in os.listdir(directory):
         document_path = os.path.join(directory, file).decode()
-        document = parser.from_file(document_path)  # Retrieve text from file
+        document = parser.from_file(document_path)                                                      # Retrieve text from file
         document = document['content']
-        content = re.sub(r'http\S+', " ", document)  # Delete all links
-        content = re.sub("[^a-zA-Z|^-]", " ", content).lower()  # Delete all punctuation/upper case letters/numbers
-        content_words = [w for w in content.split() if len(w) > 1]  # Delete all words with one letter and split words into list
-        language_name = language[detect(content)]  # Detect text language
-        content_words_core = [w for w in content_words if w not in stopwords.words(language_name)]  # Delete adverbs
-        stemmed_words = [SnowballStemmer(language_name).stem(word) for word in content_words_core]  # Group different forms of a word to a single item
-        for words in stemmed_words:
-            fdist1 = FreqDist(stemmed_words)  # Count occurrence of words
-        top_10_words = pd.DataFrame(fdist1.most_common(10), columns=['Word', 'Count'])  # Put top 10 words in table
-        filename = os.fsdecode(file)  # Retrieve filename
-        report.add_heading(filename, level=1)  # Add subtitle per document
-        report.add_paragraph(f'Language: {language_name.capitalize()}')  # Add language
-        table = report.add_table(top_10_words.shape[0] + 1, top_10_words.shape[1])  # Add template table
+        content = sub(r'http\S+', " ", document)                                                        # Delete all links
+        content = sub("[^a-zA-Z|^-]", " ", content).lower()                                             # Delete all punctuation/upper case letters/numbers
+        content_words = [w for w in content.split() if len(w) > 1]                                      # Delete all words with one letter and split words into list
+        language_name = language[classify(content)[0]]                                                  # Detect text language
+        content_words_core = [w for w in content_words if w not in stopwords.words(language_name)]      # Delete adverbs
+        stemmed_words = [SnowballStemmer(language_name).stem(word) for word in content_words_core]      # Group different forms of a word to a single item
+        fdist1 = FreqDist(stemmed_words)                                                                # Count occurrence of words
+        top_10_words = pd.DataFrame(fdist1.most_common(10), columns=['Word', 'Count'])                  # Put top 10 words in table
+        filename = os.fsdecode(file)                                                                    # Retrieve filename
+        report.add_heading(filename, level=1)                                                           # Add subtitle per document
+        report.add_paragraph(f'Language: {language_name.capitalize()}')                                 # Add language
+        table = report.add_table(top_10_words.shape[0] + 1, top_10_words.shape[1])                      # Add template table
         for j in range(top_10_words.shape[-1]):
-            table.cell(0, j).text = top_10_words.columns[j]  # Add headers to table
+            table.cell(0, j).text = top_10_words.columns[j]                                             # Add headers to table
         for i in range(top_10_words.shape[0]):
             for j in range(top_10_words.shape[-1]):
-                table.cell(i + 1, j).text = str(top_10_words.values[i, j])  # Add data to table
-        table.style = 'Light Shading'  # Change style of table
+                table.cell(i + 1, j).text = str(top_10_words.values[i, j])                              # Add data to table
+        table.style = 'Light Shading'                                                                   # Change style of table
 
-    report.save(f'{os.environ["USERPROFILE"]}/Desktop/report.docx')  # Save document to desktop
+    report.save(f'{os.environ["USERPROFILE"]}/Desktop/report.docx')                                     # Save document to desktop
 
 
-button1 = tk.Button(text='Start analysis!', command=analysis)
+button1 = tk.Button(text='Start analysis!', command=analysis)                                           # Create button executing Analysis
 canvas1.create_window(200, 180, window=button1)
 
 root.mainloop()
-

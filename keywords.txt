@@ -1,5 +1,5 @@
-supply
-demand
-transport
-logistics
-cbs
+lean
+agile
+flexible
+change
+
