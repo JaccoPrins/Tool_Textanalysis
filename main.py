@@ -8,7 +8,7 @@ TIKA_SERVER_JAR = 'https://repo1.maven.org/maven2/org/apache/tika/tika-server/1.
 tika.TikaClientonly = True
 tika.initVM()
 
-from tika import parser, language                                                                                 # pip install tika
+from tika import parser, language                                                                       # pip install tika
 from langid import classify                                                                             # pip install langid
 from re import sub
 import pandas as pd                                                                                     # pip install pandas
