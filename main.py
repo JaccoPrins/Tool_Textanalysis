@@ -4,16 +4,15 @@ from nltk.corpus import stopwords
 from nltk import tokenize, FreqDist
 import os
 import tika
-TIKA_SERVER_JAR = 'https://repo1.maven.org/maven2/org/apache/tika/tika-server/1.19/tika-server-1.19.jar'
-tika.TikaClientonly = True
-tika.initVM()
-
-from tika import parser, language                                                                       # pip install tika
+from tika import parser                                                                                 # pip install tika
 from langid import classify                                                                             # pip install langid
 from re import sub
 import pandas as pd                                                                                     # pip install pandas
 from tkinter import filedialog
 import tkinter as tk
+TIKA_SERVER_JAR = 'https://repo1.maven.org/maven2/org/apache/tika/tika-server/1.19/tika-server-1.19.jar'
+tika.TikaClientonly = True
+tika.initVM()
 
 
 def vectorize(tokens):                                                                                  # Define class vectorize
